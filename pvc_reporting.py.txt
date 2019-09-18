@@ -1,0 +1,49 @@
+#!/usr/bin/python
+
+import requests
+import socket
+from pprint import pprint
+
+#hostname = socket.gethostname()
+hostname='training.altemista.cloud'
+token='yObsHTZVZFFX_-BVV1XmY18I1DdJw1yMk7QVnDE5NaM'
+
+url = "https://" + hostname + ":8443"
+headers = { 'Authorization': 'Bearer ' + token }
+
+def checkHttpResponse(r, expectedReturnCodes = [ 200 ]):
+    if r == None:
+        raise Exception("REST API call failed")
+    if r.status_code not in expectedReturnCodes:
+        raise Exception("REST API call returned HTTP status code {}".format(r.status_code))
+
+#r = requests.get(url + "/api/v1/namespaces/altemista-keycloak/persistentvolumeclaims", headers=headers)     #Get the pvcs in a named namespace
+r = requests.get(url + "/api/v1/persistentvolumeclaims", headers=headers)
+
+checkHttpResponse(r)
+pvcs = r.json()
+
+#pprint(pvcs['items'][0]['spec']['storageClassName'])
+print("| {:<25} | {:<25} | {:<25} | {:<25} | {:<40} |".format('PVC Name','Namespace','Size','StorageClass','PV name'))
+
+for pvc in pvcs['items']:
+    try:
+        print("| {:<25} | {:<25} | {:<25} | {:<25} | {:<40} |".format(
+            pvc['metadata']['name'],
+            pvc['metadata']['namespace'],
+            pvc['spec']['resources']['requests']['storage'],
+            pvc['spec']['storageClassName'],
+            pvc['spec']['volumeName']
+        ))
+    except KeyError as e:
+        print("| {:<25} | {:<25} | {:<25} | {:<25} | {:<40} |".format(
+            pvc['metadata']['name'],
+            pvc['metadata']['namespace'],
+            pvc['spec']['resources']['requests']['storage'],
+            'none',
+            pvc['spec']['volumeName']
+        ))
+
+
+
+
