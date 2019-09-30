@@ -1,0 +1,7 @@
+git add .
+git commit -m "First push" 
+git remote add origin https://github.com/ghebu/ghebu.git
+git remote-v
+git push origin master
+git push -f origin master 
+
