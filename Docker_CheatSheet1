@@ -1,0 +1,456 @@
+#1 Login on dockerhub
+docker login 
+
+#2 docker image pull/push
+docker image pull ghebu/docker-quickstart:v1
+docker image ls
+
+##performing the push
+docker tag db8ee88ad75f ghebu/docker-deepdive:v1
+docker push ghebu/docker-deepdive:v1
+
+#3 docker container create
+docker container create 322ae7e9e6c9
+#4 docker container run
+docker container run a30543317144
+	
+docker container run:
+
+    --help Print usage
+    --rm Automatically remove the container when it exits
+    -d, --detach Run container in background and print container ID
+    -i, --interactive Keep STDIN open even if not attached
+    --name string Assign a name to the container
+    -p, --publish list Publish a container's port(s) to the host
+    -t, --tty Allocate a pseudo-TTY
+    -v, --volume list Mount a volume (the bind type of mount)
+    --mount mount Attach a filesystem mount to the container
+    --network string Connect a container to a network (default "default")
+
+############
+docker container run -d --expose 3000 nginx # open up Port 3000
+########### Get nginx from physical loclahost########
+root@ghebu-GL552VX:~# docker container run -d --expose 3000 -p 8080:80 nginx
+70bfdaebed640120a8877fa2706ab936debc9211ca9b6ccbb3593e85b2688629
+root@ghebu-GL552VX:~# curl localhost:8080
+------------
+root@ghebu-GL552VX:~# docker container run -d --expose 3000 -p 8080:80 nginx
+70bfdaebed640120a8877fa2706ab936debc9211ca9b6ccbb3593e85b2688629
+root@ghebu-GL552VX:~# curl localhost:8080
+-----------
+#####List port mappings###########
+docker container port 0ee63a441966
+###########
+
+
+#5 docker container terminal and commands
+docker container exec -it <container_id> /bin/bash 
+docker container exec -it <container_id> ls /dev/
+docker container run -it <container_id>
+#6 docker container show 
+docker container ls -a
+#7 docker container rm -f (force for when a container is started) and prune (delete all containers)
+docker container prune
+docker container rm -f <docker_id> 
+#8 docker container gather info
+docker container inspect <docker_id> 
+docker container top <docker_id>
+docker container stats <docker_id>
+docker container logs <docker_id>
+docker container ps <docker_id>
+#9 docker container manipulate state
+docker container pause <docker_id>
+docker container unpause <docker_id>
+#10 Docker logs
+##Show information logged by a running container:
+
+docker container logs [NAME]
+
+##Show information logged by all containers participating in a service:
+
+docker service logs [SERVICE]
+
+
+##################Docker Networking##################
+1.Crete a nginx container, run it in bg, give it a name and bind port 80 on 8081.
+2.Create a network br01 
+3. Connect the network to the name of the container that was created above. (docker network connect <network name> <container name>
+
+root@ghebu-GL552VX:~# docker container run -d --name network-test003 -p 8081:80 nginx
+4278eb2f66d091a7bdfdd14e7d6d2bd947ccaa8d4f51d90fc37922de3dae23cb
+root@ghebu-GL552VX:~# docker network create br01
+e8b78f28e92606ae9f76a680005845e6a92c4ac9feb2992edca5405ad6a51217
+root@ghebu-GL552VX:~# docker network connect br01 network-test003 
+root@ghebu-GL552VX:~# docker container inspect network-test003
+#disconnect from the network 
+root@ghebu-GL552VX:~# docker network disconnect br01 network-test003
+
+
+List all Docker networks on the host:
+
+docker network ls
+docker network ls --no-trunc
+
+Getting detailed info on a network:
+
+docker network inspect [NAME]
+
+Creating a network:
+
+docker network create br00
+
+Deleting a network:
+
+docker network rm [NAME]
+
+Remove all unused networks:
+
+docker network prune
+
+
+
+##Create a network with a given subnet/gateway. 
+
+docker network create --subnet 10.1.0.0/24 --gateway 10.1.0.1 br02
+
+
+LA: 
+Networking Containers
+
+In this lesson, we will dig deeper into container networking by supplying our own subnet and gateway when creating a new network. We will then move on to networking two different containers using an internal network. This will allow one container to be publicly accessible while the other one is not.
+Creating a network and defining a Subnet and Gateway
+
+Create a bridge network with a subnet and gateway:
+
+docker network create --subnet 10.1.0.0/24 --gateway 10.1.0.1 br02
+
+Run ifconfig to view the bridge interface for br02:
+
+ifconfig
+
+Inspect the br02 network:
+
+docker network inspect br02
+
+Prune all unused networks:
+
+docker network prune
+
+Create a network with an IP range:
+
+docker network create --subnet 10.1.0.0/16 --gateway 10.1.0.1 \
+--ip-range=10.1.4.0/24 --driver=bridge --label=host4network br04
+
+Inspect the br04 network:
+
+docker network inspect br04
+
+Create a container using the br04 network:
+
+docker container run --name network-test01 -it --network br04 centos /bin/bash
+
+Install Net Tools:
+
+yum update -y
+yum install -y net-tools
+
+Get the IP info for the container:
+
+ifconfig
+
+Get the gateway info the container:
+
+netstat -rn
+
+Get the DNS info for the container:
+
+cat /etc/resolv.conf
+
+Assigning IPs to a container:
+
+Create a new container and assign an IP to it:
+
+docker container run -d --name network-test02 --ip 10.1.4.102 --network br04 nginx
+
+Get the IP info for the container:
+
+docker container inspect network-test02 | grep IPAddr
+
+Inspect network-test03 to see that br01 was removed:
+
+docker container inspect network-test04
+
+Networking two containers
+
+Create an internal network:
+
+docker network create -d bridge --internal localhost
+
+Create a MySQL container that is connected to localhost:
+
+docker container run -d --name test_mysql \
+-e MYSQL_ROOT_PASSWORD=P4sSw0rd0 \
+--network localhost mysql:5.7
+
+Create a container that can ping the MySQL container:
+
+docker container run -it --name ping-mysql \
+--network bridge \
+centos
+
+Connect ping-mysql to the localhost network:
+
+docker network connect localhost ping-mysql
+
+Restart and attach to container:
+
+docker container start -ia ping-mysql
+
+Create a container that can't ping the MySQL container:
+
+docker container run -it --name cant-ping-mysql \
+centos
+
+Create a Nginx container that is not publicly accessible:
+
+docker container run -d --name private-nginx -p 8081:80 --network localhost nginx
+
+Inspect private-nginx:
+
+docker container inspect private-nginx
+
+
+
+#Docker volume
+
+
+Using the mount flag:
+
+#mkdir target
+
+#docker container run -d \
+  --name nginx-bind-mount1 \
+  --mount type=bind,source="$(pwd)"/target,target=/app \
+  nginx
+
+Using the volume flag:
+
+#docker container run -d \
+ --name nginx-bind-mount2 \
+ -v "$(pwd)"/target2:/app \
+ nginx
+
+
+##10 Docker file
+Working with Instructions
+
+FROM: Initializes a new build stage and sets the Base Image
+
+RUN: Will execute any commands in a new layer
+
+CMD: Provides a default for an executing container. There can only be one CMD instruction in a Dockerfile
+
+LABEL: Adds metadata to an image
+
+EXPOSE: Informs Docker that the container listens on the specified network ports at runtime
+
+ENV: Sets the environment variable <key> to the value <value>
+
+ADD: Copies new files, directories or remote file URLs from <src> and adds them to the filesystem of the image at the path <dest>.
+
+COPY: Copies new files or directories from <src> and adds them to the filesystem of the container at the path <dest>.
+
+ENTRYPOINT: Allows for configuring a container that will run as an executable
+
+VOLUME: Creates a mount point with the specified name and marks it as holding externally mounted volumes from native host or other containers
+
+USER: Sets the user name (or UID) and optionally the user group (or GID) to use when running the image and for any RUN, CMD, and ENTRYPOINT instructions that follow it in the Dockerfile
+
+WORKDIR: Sets the working directory for any RUN, CMD, ENTRYPOINT, COPY, and ADD instructions that follow it in the Dockerfile
+
+ARG: Defines a variable that users can pass at build-time to the builder with the docker build command, using the --build-arg <varname>=<value> flag
+
+ONBUILD: Adds a trigger instruction to the image that will be executed at a later time, when the image is used as the base for another build
+
+HEALTHCHECK: Tells Docker how to test a container to check that it is still working
+
+SHELL: Allows the default shell used for the shell form of commands to be overridden
+
+To set up the environment:
+
+sudo yum install git -y
+mkdir docker_images
+cd docker_images
+mkdir weather-app
+cd weather-app
+git clone https://github.com/linuxacademy/content-weather-app.git src
+
+Create the Dockerfile:
+
+vi Dockerfile
+
+Dockerfile contents:
+
+# Create an image for the weather-app
+FROM node
+LABEL org.label-schema.version=v1.1
+RUN mkdir -p /var/node
+ADD src/ /var/node/
+WORKDIR /var/node
+RUN npm install
+EXPOSE 3000
+CMD ./bin/www
+
+Build the weather-app image:
+
+docker image build -t linuxacademy/weather-app:v1 .
+
+List the images:
+
+docker image ls
+
+Create the weather-app container:
+
+docker container run -d --name weather-app1 -p 8081:3000 linuxacademy/weather-app:v1
+
+List all running containers:
+
+docker container ls
+
+
+############3Docker args
+root@ghebu-GL552VX:~/docker_images/args# cat Dockerfile 
+FROM node
+LABEL org.label-schema.version=v1.1
+ARG SRC_DIR=/var/node
+
+RUN mkdir -p $SRC_DIR
+ADD src/ $SRC_DIR
+WORKDIR $SRC_DIR
+RUN npm install
+EXPOSE 3000
+CMD ./bin/www
+
+
+#Use $(pwd) or . or full path to current dir or where the docker file is
+#docker image build -t linuxacademy/weather-app:v3 --build-arg SRC_DIR=/var/code $(pwd)
+
+##11 Docker Volume
+Using the Volume Instruction
+
+In this lesson, we will use the VOLUME instruction to automatically create a mount point in a Docker image. When a container is created using this image, a volume will be created and mounted to the specified directory.
+
+Set up your environment:
+
+cd docker_images
+mkdir volumes
+cd volumes
+
+Create the Dockerfile:
+
+vi Dockerfile
+
+Build an Nginx image that uses a volume:
+
+FROM nginx:latest
+VOLUME ["/usr/share/nginx/html/"]
+
+Build the new image:
+
+docker image build -t linuxacademy/nginx:v1 .
+
+Create a new container using the linuxacademy/nginx:v1 image:
+
+docker container run -d --name nginx-volume linuxacademy/nginx:v1
+
+Inspect nginx-volume:
+
+docker container inspect nginx-volume
+
+List the volumes:
+
+docker volume ls | grep [VOLUME_NAME]
+
+Inspect the volumes:
+
+docker volume inspect [VOLUME_NAME]
+
+
+####12 Docker Hub 
+Distributing Images on Docker Hub
+
+In this lesson, we'll walk through how to tag and push an image to Docker Hub. You will need a Docker Hub account.
+
+Create a Docker Hub account:
+
+https://hub.docker.com/
+
+Docker Push:
+
+docker image push <USERNAME>/<IMAGE_NAME>:<TAG>
+
+Creating an image for Docker Hub:
+
+docker image tag <IMAGE_NAME>:<TAG> <linuxacademy>/<IMAGE_NAME>:<TAG>
+
+Set up your environment:
+
+cd docker_images
+mkdir dockerhub
+cd dockerhub
+
+Create the Dockerfile:
+
+vi Dockerfile
+
+Dockerfile contents:
+
+# Create an image for the weather-app using multi-stage build
+FROM node AS build
+RUN mkdir -p /var/node/
+ADD src/ /var/node/
+WORKDIR /var/node
+RUN npm install
+
+FROM node:alpine
+ARG VERSION=V1.1
+LABEL org.label-schema.version=$VERSION
+ENV NODE_ENV="production"
+COPY --from=build /var/node /var/node
+WORKDIR /var/node
+EXPOSE 3000
+ENTRYPOINT ["./bin/www"]
+
+Git the weather-app code:
+
+git clone https://github.com/linuxacademy/content-weather-app.git src
+
+Use the Git commit hash as the image tag:
+
+cd src
+git log -1 --pretty=%H
+cd ../
+
+Build the image:
+
+docker image build -t <USERNAME>/weather-app:<HASH> --build-arg VERSION=1.5 .
+
+Tag the image before pushing it to Docker Hub:
+
+docker image tag linuxacademy/weather-app:<HASH> <USERNAME>/weather-app:<HASH>
+
+Push the image to Docker Hub:
+
+docker login 
+docker image push <USERNAME>/weather-app:<HASH>
+
+Tag the latest image:
+
+docker image tag <USERNAME>/weather-app:<HASH> <USERNAME>/weather-app:latest
+
+Push the latest image to Docker Hub:
+
+docker login <USERNAME>
+docker image push <USERNAME>/weather-app:latest
+
+
